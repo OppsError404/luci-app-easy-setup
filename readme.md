@@ -20,6 +20,9 @@ apk update && curl -L -o /tmp/luci-app-easy-setup-1.0.0-r1.apk https://github.co
 
 ---
 
+## Navigating the page
+  - Open luci then -> `Network/Easy Setup`
+
 ## Key Features
 
 - **🎨 Modern Responsive UI**: 
