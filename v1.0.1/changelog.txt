@@ -1,0 +1,3 @@
+1. fixed the issue where page nav going on the top of luci navigation
+2. added confirmation dialouge when saving ssid and radio related settings to prevent accidental aleration 
+3. some minor ui optimizations 
