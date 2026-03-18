@@ -6,16 +6,32 @@
 
 ## Installation
 
-Run the following command in your router's terminal to download, install, and clean up the package:
+Choose the installation method based on your OpenWrt version:
 
-### Using wget (Standard)
+### For OpenWrt >= 25.12 (using apk)
+Run the following command in your router's terminal to download and install the `.apk` package:
+
+#### Using wget (Standard)
 ```bash
 apk update && wget --no-check-certificate -O /tmp/luci-app-easy-setup-1.0.0-r1.apk https://github.com/OppsError404/luci-app-easy-setup/releases/download/initial-release/luci-app-easy-setup-1.0.0-r1.apk && apk add --allow-untrusted /tmp/luci-app-easy-setup-1.0.0-r1.apk && rm /tmp/luci-app-easy-setup-1.0.0-r1.apk
 ```
 
-### Using curl (Alternative)
+#### Using curl (Alternative)
 ```bash
 apk update && curl -L -o /tmp/luci-app-easy-setup-1.0.0-r1.apk https://github.com/OppsError404/luci-app-easy-setup/releases/download/initial-release/luci-app-easy-setup-1.0.0-r1.apk && apk add --allow-untrusted /tmp/luci-app-easy-setup-1.0.0-r1.apk && rm /tmp/luci-app-easy-setup-1.0.0-r1.apk
+```
+
+### For OpenWrt < 24.12 (using opkg/ipk)
+Run the following command in your router's terminal to download and install the `.ipk` package:
+
+#### Using wget (Standard)
+```bash
+opkg update && wget --no-check-certificate -O /tmp/luci-app-easy-setup_1.0.0-r1_aarch64_cortex-a53.ipk https://github.com/OppsError404/luci-app-easy-setup/releases/download/initial-release/luci-app-easy-setup_1.0.0-r1_aarch64_cortex-a53.ipk && opkg install /tmp/luci-app-easy-setup_1.0.0-r1_aarch64_cortex-a53.ipk && rm /tmp/luci-app-easy-setup_1.0.0-r1_aarch64_cortex-a53.ipk
+```
+
+#### Using curl (Alternative)
+```bash
+opkg update && curl -L -o /tmp/luci-app-easy-setup_1.0.0-r1_aarch64_cortex-a53.ipk https://github.com/OppsError404/luci-app-easy-setup/releases/download/initial-release/luci-app-easy-setup_1.0.0-r1_aarch64_cortex-a53.ipk && opkg install /tmp/luci-app-easy-setup_1.0.0-r1_aarch64_cortex-a53.ipk && rm /tmp/luci-app-easy-setup_1.0.0-r1_aarch64_cortex-a53.ipk
 ```
 
 ---
