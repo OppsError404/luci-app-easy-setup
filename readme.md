@@ -1,4 +1,4 @@
-# luci-app-easy-setup (Initial Release)
+# luci-app-easy-setup
 
 `luci-app-easy-setup` is a modern, user-friendly LuCI application for OpenWrt designed to simplify network and wireless configuration. It provides a clean, responsive interface that makes managing your router's core features easy and intuitive.
 
@@ -13,12 +13,12 @@ Run the following command in your router's terminal to download and install the 
 
 #### Using wget (Standard)
 ```bash
-apk update && wget --no-check-certificate -O /tmp/luci-app-easy-setup-1.0.1-r1.apk https://github.com/OppsError404/luci-app-easy-setup/raw/main/v1.0.1/luci-app-easy-setup-1.0.1-r1.apk && apk add --allow-untrusted /tmp/luci-app-easy-setup-1.0.1-r1.apk && rm /tmp/luci-app-easy-setup-1.0.1-r1.apk
+apk update && wget --no-check-certificate -O /tmp/luci-app-easy-setup-1.0.1-r1.apk https://github.com/OppsError404/luci-app-easy-setup/releases/download/v1.0.1/luci-app-easy-setup-1.0.1-r1.apk && apk add --allow-untrusted /tmp/luci-app-easy-setup-1.0.1-r1.apk && rm /tmp/luci-app-easy-setup-1.0.1-r1.apk
 ```
 
 #### Using curl (Alternative)
 ```bash
-apk update && curl -L -o /tmp/luci-app-easy-setup-1.0.1-r1.apk https://github.com/OppsError404/luci-app-easy-setup/raw/main/v1.0.1/luci-app-easy-setup-1.0.1-r1.apk && apk add --allow-untrusted /tmp/luci-app-easy-setup-1.0.1-r1.apk && rm /tmp/luci-app-easy-setup-1.0.1-r1.apk
+apk update && curl -L -o /tmp/luci-app-easy-setup-1.0.1-r1.apk https://github.com/OppsError404/luci-app-easy-setup/releases/download/v1.0.1/luci-app-easy-setup-1.0.1-r1.apk && apk add --allow-untrusted /tmp/luci-app-easy-setup-1.0.1-r1.apk && rm /tmp/luci-app-easy-setup-1.0.1-r1.apk
 ```
 
 ### For OpenWrt v24.10.5 or older (.ipk)
@@ -26,12 +26,12 @@ Run the following command in your router's terminal to download and install the 
 
 #### Using wget (Standard)
 ```bash
-opkg update && wget --no-check-certificate -O /tmp/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk https://github.com/OppsError404/luci-app-easy-setup/raw/main/v1.0.1/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk && opkg install /tmp/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk && rm /tmp/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk
+opkg update && wget --no-check-certificate -O /tmp/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk https://github.com/OppsError404/luci-app-easy-setup/releases/download/v1.0.1/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk && opkg install /tmp/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk && rm /tmp/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk
 ```
 
 #### Using curl (Alternative)
 ```bash
-opkg update && curl -L -o /tmp/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk https://github.com/OppsError404/luci-app-easy-setup/raw/main/v1.0.1/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk && opkg install /tmp/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk && rm /tmp/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk
+opkg update && curl -L -o /tmp/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk https://github.com/OppsError404/luci-app-easy-setup/releases/download/v1.0.1/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk && opkg install /tmp/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk && rm /tmp/luci-app-easy-setup_1.0.1-r1_aarch64_cortex-a53.ipk
 ```
 
 ---
