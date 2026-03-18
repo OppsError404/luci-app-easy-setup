@@ -89,4 +89,11 @@ opkg remove luci-app-easy-setup
 - `luci-compat`
 
 ---
+
+## Screenshots
+
+![WAN Settings](wan-settings.png)
+![Wireless Options](wireless-options.png)
+
+---
 *Created by OppsError404*
