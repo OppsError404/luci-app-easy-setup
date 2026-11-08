@@ -1,0 +1,101 @@
+#!/bin/sh /etc/rc.common
+# /etc/init.d/easy_setup
+
+USE_PROCD=1
+START=66
+STOP=9
+
+NAME="easy_setup"
+
+log() { logger -t "$NAME" "$*"; }
+
+# ── Asset decompression (flash → RAM) ────────────────────────────────────────
+# Compressed .gz assets are shipped on flash to save space; at boot they are
+# decompressed to RAM (tmpfs) and symlinked back into the source dir so uhttpd
+# serves the uncompressed files to the browser.
+
+_decompress_file() {
+    local gz="$1" ram_dir="$2" src_dir="$3"
+
+    [ -f "$gz" ] || return 0
+    case "$gz" in *.gz.gz) return 0;; esac
+
+    local base ram_file target
+    base="$(basename "$gz" .gz)"
+    ram_file="$ram_dir/$base"
+    target="$src_dir/$base"
+
+    [ -f "$ram_file" ] && {
+        [ -L "$target" ] && ln -sf "$ram_file" "$target"
+        return 0
+    }
+
+    mkdir -p "$ram_dir" 2>/dev/null
+    if gunzip -c "$gz" > "$ram_file" 2>/dev/null; then
+        rm -f "$target"
+        ln -sf "$ram_file" "$target"
+    else
+        rm -f "$ram_file"
+        log "WARN: failed to decompress $base"
+    fi
+}
+
+_decompress_assets() {
+    local src_dir="/www/luci-static/resources/view/easy_setup"
+    local ram_dir="/tmp/luci-static/resources/view/easy_setup"
+    local asset gz
+
+    for asset in "$src_dir"/*; do
+        case "$asset" in
+            *.gz) continue ;;
+        esac
+        rm -f "$asset"
+    done
+
+    rm -rf "$ram_dir"
+    for gz in "$src_dir"/*.gz; do
+        _decompress_file "$gz" "$ram_dir" "$src_dir"
+    done
+}
+
+_cache_wpa3_support() {
+    local cache_dir="/tmp/easy_setup"
+    local cache_file="$cache_dir/wpa3_support"
+    local wpad="/usr/sbin/wpad"
+
+    mkdir -p "$cache_dir" 2>/dev/null
+    [ -e "$wpad" ] || wpad="/usr/sbin/hostapd"
+    if [ -e "$wpad" ] && grep -qa -e sae_password -e sae_pwe -e sae_anti_clogging "$wpad" 2>/dev/null; then
+        printf '1\n' > "$cache_file"
+    else
+        printf '0\n' > "$cache_file"
+    fi
+}
+
+# ── procd hooks ───────────────────────────────────────────────────────────────
+
+start_service() {
+    _decompress_assets
+    _cache_wpa3_support
+}
+
+stop_service() {
+    local f
+    for f in /www/luci-static/resources/view/easy_setup/*; do
+        [ -L "$f" ] && rm -f "$f"
+    done
+    rm -rf /tmp/luci-static/resources/view/easy_setup 2>/dev/null
+}
+
+reload_service() {
+    rm -f /tmp/luci-indexcache /tmp/luci-modulecache /tmp/luci-*cache* 2>/dev/null
+    _decompress_assets
+    _cache_wpa3_support
+    if /etc/init.d/uhttpd enabled 2>/dev/null; then
+        /etc/init.d/uhttpd reload 2>/dev/null || true
+    fi
+}
+
+service_triggers() {
+    procd_add_reload_trigger "uhttpd"
+}

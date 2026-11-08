@@ -1,0 +1,125 @@
+{% include('header') %}
+<meta charset="utf-8" />
+<link rel="stylesheet" href="/luci-static/resources/view/easy_setup/guest.css" />
+<script>
+var EASY_SID = "{{ ctx.authsession }}";
+</script>
+<script src="/luci-static/resources/view/easy_setup/common.js"></script>
+
+<div class="nc-wrap">
+  <div class="nc-header">
+    <div class="nc-header-text">
+      <h1>Easy Setup</h1>
+      <p>Configure WAN internet connection and Wi-Fi settings</p>
+    </div>
+  </div>
+
+  {% include('easy_setup/_nav') %}
+
+  <div class="nc-subpage-title">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <h2>Guest APs</h2>
+  </div>
+
+  <div class="page-desc">
+    Create a separate wireless network for guests. Guest networks are isolated from your main network and local devices, providing internet-only access for visitors.
+  </div>
+
+  <div class="dep-warning" id="guest-dep-warning">
+    <div class="dep-warning-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="dep-warning-text">
+      <b>Missing Guest Dependencies</b>
+      <span id="guest-dep-msg">Required network components are not configured.</span>
+    </div>
+    <button class="btn-fix-dep" id="btn-fix-guest-dep" onclick="fixGuestDeps()">Fix Automatically</button>
+  </div>
+
+  <div class="band-tabs" id="guest-band-tabs">
+    <button class="band-tab active" id="gtab-2g"  onclick="switchGuestBand('2g',this)">2.4 GHz</button>
+    <button class="band-tab"        id="gtab-5g"  onclick="switchGuestBand('5g',this)">5 GHz</button>
+    <button class="band-tab" style="display:none" id="gtab-5gb" onclick="switchGuestBand('5gb',this)">5 GHz (2)</button>
+    <button class="band-tab" style="display:none" id="gtab-6g"  onclick="switchGuestBand('6g',this)">6 GHz</button>
+  </div>
+
+  <div id="gbp-2g"  class="guest-band-panel active"><div style="text-align:center;padding:40px;color:var(--text-muted)">Loading guest networks...</div></div>
+  <div id="gbp-5g"  class="guest-band-panel"></div>
+  <div id="gbp-5gb" class="guest-band-panel"></div>
+  <div id="gbp-6g"  class="guest-band-panel"></div>
+
+  <div class="nc-card" id="guest-net-card">
+    <div class="nc-card-head">
+      <div class="nc-card-head-left">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        <h2 style="margin-left:8px">Status &amp; Info</h2>
+      </div>
+    </div>
+    <div class="nc-card-body">
+      <div class="fg" style="margin-bottom:18px">
+        <div class="nf">
+          <label>Gateway IP</label>
+          <input type="text" id="guest-ipaddr" placeholder="192.168.2.1" oninput="guestMarkNetDirty()">
+          <span class="hint">Router IP on the guest network (/24 assumed)</span>
+        </div>
+        <div class="nf">
+          <label>DHCP Range</label>
+          <div class="guest-net-card-dhcp" id="guest-dhcp-preview">&mdash;</div>
+          <span class="hint">Auto-calculated &middot; 150 leases &middot; 1-hour TTL</span>
+        </div>
+      </div>
+      <div style="font-size:.79rem;font-weight:600;color:var(--text-mid);margin-bottom:8px">Applied Firewall Rules</div>
+      <div class="guest-fw-table">
+        <div class="guest-fw-row"><span class="guest-fw-key">Zone</span><span class="guest-fw-val">guest_zone</span></div>
+        <div class="guest-fw-row"><span class="guest-fw-key">Policy</span><span class="guest-fw-val">Input-REJECT &middot; Output-ACCEPT &middot; Forward-REJECT</span></div>
+        <div class="guest-fw-row"><span class="guest-fw-key">Forwarding</span><span class="guest-fw-val">guest_zone &rarr; wan (Internet access)</span></div>
+        <div class="guest-fw-row"><span class="guest-fw-key">Allowed</span><span class="guest-fw-val">DHCP UDP 67-68 &middot; DNS TCP/UDP 53</span></div>
+        <div class="guest-fw-row"><span class="guest-fw-key">LAN Access</span><span class="guest-fw-val ok">Blocked &mdash; guests cannot reach LAN</span></div>
+        <div class="guest-fw-row"><span class="guest-fw-key">Status</span><span class="guest-fw-val warn" id="gfw-status">Will be created on first save</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="universal-save-bar" id="universal-save-bar">
+    <span class="usb-status" id="usb-status">No changes</span>
+    <button class="nc-btn btn-wl btn-save-apply" id="usb-apply" onclick="saveAllUniversal()" disabled>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M19 21H5a2 0 0 1 -2 -2V5a2 0 0 1 2 -2h11l5 5v11a2 0 0 1 -2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save &amp; Apply</button>
+  </div>
+
+</div>
+
+<div class="save-overlay" id="save-overlay">
+  <div class="save-overlay-box">
+    <div class="save-overlay-spinner"></div>
+    <div class="save-overlay-text" id="save-overlay-text">Saving...</div>
+    <div class="save-overlay-sub" id="save-overlay-sub">Please wait</div>
+  </div>
+</div>
+
+<!-- Generic SSID confirmation popup -->
+<div class="confirm-overlay" id="ssid-confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" style="color:#f0b432">Apply Guest Settings?</div>
+    <div class="save-confirm-warn" style="display:flex;margin:2px 0">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span id="ssid-confirm-msg">Applying changes will briefly disconnect clients connected to this guest SSID.</span>
+    </div>
+    <div class="confirm-btns">
+      <button class="confirm-btn-no" onclick="document.getElementById('ssid-confirm-overlay').classList.remove('show')">Cancel</button>
+      <button class="confirm-btn-yes" id="ssid-confirm-yes">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-overlay" id="toast-overlay" onclick="dismissBanner()">
+  <div class="toast-overlay-box">
+    <div class="toast-overlay-icon" id="toast-overlay-icon">
+      <svg id="toast-overlay-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></svg>
+    </div>
+    <div class="toast-overlay-text" id="toast-overlay-text"></div>
+    <ul class="toast-overlay-changes" id="toast-overlay-changes"></ul>
+  </div>
+</div>
+
+<script src="/luci-static/resources/view/easy_setup/guest.js"></script>
+{% include('footer') %}

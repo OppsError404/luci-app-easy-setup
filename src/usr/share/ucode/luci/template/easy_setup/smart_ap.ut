@@ -1,0 +1,109 @@
+{% include('header') %}
+<meta charset="utf-8" />
+<link rel="stylesheet" href="/luci-static/resources/view/easy_setup/smart_ap.css" />
+<script>
+var EASY_SID = "{{ ctx.authsession }}";
+</script>
+<script src="/luci-static/resources/view/easy_setup/common.js"></script>
+
+  <div class="nc-wrap">
+    <div id="wpad-warning" class="warning-msg">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+      <div>
+        <b>Incompatible Wi-Fi Package</b>
+        <p>Your router is running a limited Wi-Fi package (wpad-basic or wpad-mini) that does not support advanced
+          roaming features like 802.11k/v/r. Smart APs features may not function correctly. Please install the full 'wpad' or 'wpad-mesh' package for the best experience.</p>
+      </div>
+    </div>
+
+    <div class="nc-header">
+      <div class="nc-header-text">
+        <h1>Easy Setup</h1>
+        <p>Configure WAN internet connection and Wi-Fi settings</p>
+      </div>
+    </div>
+
+    {% include('easy_setup/_nav') %}
+
+    <div class="nc-subpage-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="5" r="2" />
+        <circle cx="5" cy="19" r="2" />
+        <circle cx="19" cy="19" r="2" />
+        <line x1="12" y1="7" x2="5" y2="17" />
+        <line x1="12" y1="7" x2="19" y2="17" />
+        <line x1="5" y1="19" x2="19" y2="19" />
+      </svg>
+      <h2>Smart APs</h2>
+    </div>
+
+    <div class="page-desc">
+      Configure Mesh and Smart AP settings. This page allows you to manage SSIDs that are synchronized across all your
+      access points, ensuring a seamless roaming experience and unified network management.
+    </div>
+
+    <div id="smart-ap-container">
+      <div style="text-align:center;padding:40px;color:var(--text-muted)">Loading configuration...</div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:18px">
+      <button class="nc-btn btn-add" onclick="addNewSsidCard()" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Add SSID
+      </button>
+    </div>
+
+    <div class="universal-save-bar" id="universal-save-bar">
+      <span class="usb-status" id="usb-status">No changes</span>
+      <button class="nc-btn btn-save-apply" id="usb-apply" onclick="saveAllUniversal()" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+          <polyline points="17 21 17 13 7 13 7 21" />
+          <polyline points="7 3 7 8 15 8" />
+        </svg>
+        Save & Apply
+      </button>
+    </div>
+  </div>
+
+  <div class="save-overlay" id="save-overlay">
+    <div class="save-overlay-box">
+      <div class="save-overlay-spinner"></div>
+      <div class="save-overlay-text" id="save-overlay-text">Saving…</div>
+    </div>
+  </div>
+
+  <div class="confirm-overlay" id="ssid-confirm-overlay">
+    <div class="confirm-box">
+      <div class="confirm-title" style="color:#f0b432">Apply Settings?</div>
+      <div class="save-confirm-warn" style="display:flex;margin:2px 0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="ssid-confirm-msg">Applying Wi-Fi changes will briefly disconnect connected clients.</span>
+      </div>
+      <div class="confirm-btns">
+        <button class="confirm-btn-no" onclick="document.getElementById('ssid-confirm-overlay').classList.remove('show')">Cancel</button>
+        <button class="confirm-btn-yes" id="ssid-confirm-yes">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-overlay" id="toast-overlay" onclick="this.classList.remove('show')">
+    <div class="toast-overlay-box">
+      <div class="toast-overlay-icon" id="toast-overlay-icon"></div>
+      <div class="toast-overlay-text" id="toast-overlay-text"></div>
+    </div>
+  </div>
+
+<script src="/luci-static/resources/view/easy_setup/smart_ap.js"></script>
+{% include('footer') %}

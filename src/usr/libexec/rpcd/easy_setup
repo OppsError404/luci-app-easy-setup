@@ -1,0 +1,54 @@
+#!/bin/sh
+# /usr/libexec/rpcd/easy_setup
+# rpcd ubus backend for luci-app-easy-setup
+# Exposes ubus object "easy_setup" with methods for WAN, wireless, guest,
+# and Smart AP configuration.
+#
+# The shell dispatcher delegates all business logic to a Lua helper module
+# at /usr/lib/lua/luci/easy_setup_pkg/handler.lua, which reads JSON params
+# from stdin (passed as $2) and writes JSON to stdout.
+
+HANDLER="/usr/lib/lua/luci/easy_setup_pkg/handler.lua"
+
+log() { logger -t "rpcd-easy-setup" "$*"; }
+
+case "$1" in
+	list)
+		cat <<'EOF'
+{
+	"get_config": { "scope": "str" },
+	"get_ap_config": {},
+	"get_radio_config": {},
+	"get_radio_capabilities": {},
+	"status_wan": { "fast": "bool" },
+	"status_wireless": {},
+	"get_channels": { "radio": "str" },
+	"get_wan_devices": {},
+	"get_smart_ap_config": {},
+	"get_guest_config": {},
+	"status_guest": {},
+	"save_wan": { "proto": "str", "device": "str", "mtu": "str", "mac": "str", "peerdns": "bool", "username": "str", "password": "str", "ipaddr": "str", "netmask": "str", "gateway": "str", "dns": "str", "packet_steering": "str", "wan_ipv6": "bool", "lan_ipv6": "bool" },
+	"save_wireless": { "save_type": "str", "band": "str", "radio_sec": "str", "iface_sec": "str", "ssid": "str", "enc": "str", "key": "str", "hidden": "str", "iface_disabled": "str", "dev_disabled": "str", "roam": "str", "isolate": "str", "wnm": "str", "channel": "str", "htmode": "str", "txpower": "str", "country": "str", "noscan": "str" },
+	"reconnect_wan": {},
+	"delete_iface": { "iface_sec": "str" },
+	"save_offload": { "flow_offload": "bool", "hw_flow_offload": "bool" },
+	"save_pkt_steering": { "packet_steering": "str" },
+	"save_smart_ap": { "old_ssid": "str", "ssid": "str", "enc": "str", "key": "str", "hidden": "str", "disabled": "str", "isolate": "str", "roam": "str", "wnm": "str", "is_candidate": "bool" },
+	"delete_smart_ap": { "ssid": "str" },
+	"save_guest": { "band": "str", "radio_sec": "str", "iface_sec": "str", "ssid": "str", "enc": "str", "key": "str", "hidden": "str", "disabled": "str", "isolate": "str", "roam": "str", "ipaddr": "str" },
+	"delete_guest_band": { "iface_sec": "str", "radio_sec": "str" },
+	"fix_guest_dependencies": {}
+}
+EOF
+		;;
+	call)
+		input=""
+		# Read JSON params from stdin (rpcd passes method args as JSON on stdin)
+		read -r input 2>/dev/null
+		# Delegate to Lua handler: arg[1]=method, arg[2]=json params
+		lua "$HANDLER" "$2" "$input" 2>/dev/null
+		;;
+	*)
+		log "ERROR: unknown rpcd command: $1"
+		;;
+esac

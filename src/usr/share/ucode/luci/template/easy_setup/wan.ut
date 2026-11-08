@@ -1,0 +1,470 @@
+{% include('header') %}
+<meta charset="utf-8" />
+<link rel="stylesheet" href="/luci-static/resources/view/easy_setup/wan.css" />
+<script>
+var EASY_SID = "{{ ctx.authsession }}";
+</script>
+<script src="/luci-static/resources/view/easy_setup/common.js"></script>
+
+<div class="nc-wrap">
+
+  <div class="nc-header">
+    <div class="nc-header-text">
+      <h1>Easy Setup</h1>
+      <p>Configure WAN internet connection and Wi-Fi settings</p>
+    </div>
+  </div>
+
+  {% include('easy_setup/_nav') %}
+
+  <div id="nc-banner" class="nc-banner" role="alert" style="display:none"></div>
+
+  <!-- WAN PAGE -->
+  <div id="page-wan" class="nc-page active">
+
+    <!-- w-port / w-proto kept hidden for JS compatibility -->
+    <span id="w-port"  style="display:none"></span>
+    <span id="w-proto" style="display:none"></span>
+
+    <!-- Card 1: Connection Type & Protocol Selector -->
+    <div class="nc-card">
+      <div class="nc-card-head">
+        <div class="nc-card-head-left">
+          <h2>Connection Type</h2>
+        </div>
+      </div>
+      <div class="nc-card-body">
+        <div style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:10px 14px">
+          <label style="font-size:.79rem;font-weight:600;color:var(--text-mid);white-space:nowrap;margin:0">Protocol</label>
+          <div class="nf" style="margin:0;max-width:240px">
+            <select id="proto-select" onchange="switchProto(this.value)">
+              <option value="dhcp">DHCP</option>
+              <option value="static">Static IP</option>
+              <option value="pppoe">PPPoE</option>
+            </select>
+          </div>
+          <!-- WAN port row: hidden when configured, shown when not -->
+          <label id="wan-port-label" style="font-size:.79rem;font-weight:600;color:var(--text-mid);white-space:nowrap;margin:0;align-self:flex-start;padding-top:10px;display:none">WAN Port</label>
+          <div id="wan-port-row" style="flex:1;display:none;flex-direction:column;gap:0">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="nf" style="flex:1;margin:0;max-width:240px">
+                <select id="device-select" onchange="wanMarkDirty()">
+                  <option value="">-- Select Port --</option>
+                </select>
+              </div>
+            </div>
+            <div id="wan-not-cfg-banner" style="margin-top:8px;align-items:center;gap:10px;padding:9px 13px;border-radius:7px;border:1px solid rgba(240,180,50,0.35);background:rgba(240,180,50,0.07)">
+              <svg style="flex-shrink:0;color:#f0b432" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span style="flex:1;font-size:.75rem;color:rgba(240,180,50,0.92);font-weight:600;line-height:1.4">WAN port is not configured.</span>
+              <button class="nc-btn btn-wan" style="padding:5px 14px;font-size:.76rem;flex-shrink:0" onclick="configureWanPort()">Configure</button>
+            </div>
+          </div>
+        </div><!-- end grid -->
+
+        <!-- WAN physical link warning — shown when port is configured but no carrier -->
+        <div id="wan-disc-notice" class="wan-disc-notice" style="display:none">
+          <svg class="wan-disc-notice-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <div class="wan-disc-notice-body">
+            <span class="wan-disc-notice-title">WAN Port Not Connected</span>
+            <span class="wan-disc-notice-msg">No physical link has been detected on the WAN interface. Verify that the cable is firmly seated at both ends and that the upstream modem or ONT is powered on.</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Card 2: WAN Information (live status) -->
+    <div class="nc-card" id="conninfo-card" style="display:none">
+      <div class="nc-card-head">
+        <div class="nc-card-head-left">
+          <h2>WAN Information</h2>
+        </div>
+      </div>
+      <div class="nc-card-body" style="padding:16px 22px">
+        <div class="conninfo-block" id="conninfo-block">
+          <div class="conninfo-row">
+            <div class="conninfo-cell"><div class="conninfo-text"><span class="conninfo-lbl">Internet</span><span class="conninfo-val" id="w-state">-</span></div></div>
+            <div class="conninfo-cell"><div class="conninfo-text"><span class="conninfo-lbl">WAN IP</span><span class="conninfo-val empty" id="w-ip">-</span></div></div>
+            <div class="conninfo-cell"><div class="conninfo-text"><span class="conninfo-lbl">Gateway</span><span class="conninfo-val empty" id="w-gw">-</span></div></div>
+            <div class="conninfo-cell conninfo-cell--last"><div class="conninfo-text conninfo-dns"><span class="conninfo-lbl">Active DNS</span><span class="conninfo-val empty" id="w-dns">-</span></div></div>
+          </div>
+          <div class="conninfo-row">
+            <div class="conninfo-cell"><div class="conninfo-text"><span class="conninfo-lbl">WAN Uptime</span><span class="conninfo-val empty" id="w-uptime">-</span></div></div>
+            <div class="conninfo-cell"><div class="conninfo-text"><span class="conninfo-lbl">RX</span><span class="conninfo-val empty" id="w-rx">-</span></div></div>
+            <div class="conninfo-cell"><div class="conninfo-text"><span class="conninfo-lbl">TX</span><span class="conninfo-val empty" id="w-tx">-</span></div></div>
+            <div class="conninfo-cell conninfo-cell--last conninfo-cell--empty"></div>
+          </div>
+        </div>
+
+        <!-- IPv6 section (shown only when WAN IPv6 is enabled) -->
+        <div id="conninfo-ipv6" style="display:none">
+          <div style="display:flex;align-items:center;gap:6px;margin:10px 0 6px;padding:0 2px">
+            <span style="font-size:.60rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em">IPv6</span>
+            <span style="flex:1;height:1px;background:var(--border-sub)"></span>
+          </div>
+          <div class="conninfo-block">
+            <div class="conninfo-row">
+              <div class="conninfo-cell"><div class="conninfo-text"><span class="conninfo-lbl">IPv6 Status</span><span class="conninfo-val" id="w6-state">-</span></div></div>
+              <div class="conninfo-cell"><div class="conninfo-text"><span class="conninfo-lbl">IPv6 Address</span><span class="conninfo-val empty" id="w6-ip">-</span></div></div>
+              <div class="conninfo-cell"><div class="conninfo-text"><span class="conninfo-lbl">IPv6 Gateway</span><span class="conninfo-val empty" id="w6-gw">-</span></div></div>
+              <div class="conninfo-cell conninfo-cell--last"><div class="conninfo-text conninfo-dns"><span class="conninfo-lbl">IPv6 DNS</span><span class="conninfo-val empty" id="w6-dns">-</span></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="nc-actions">
+        <button class="nc-btn btn-sec btn-reconnect" onclick="reconnectWan()">Reconnect</button>
+      </div>
+    </div>
+
+    <!-- WAN Connection Error Banner -->
+    <div class="wan-err-banner" id="wan-err-banner" role="alert">
+      <div class="wan-err-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div class="wan-err-body">
+        <div class="wan-err-title">
+          <span id="wan-err-title-text">Connection Failed</span>
+          <span class="wan-err-code" id="wan-err-code"></span>
+        </div>
+        <div class="wan-err-msg" id="wan-err-msg"></div>
+        <div class="wan-err-hint" id="wan-err-hint"></div>
+        <div class="wan-err-actions">
+          <button class="nc-btn btn-sec btn-reconnect" style="padding:4px 14px;font-size:.76rem" onclick="reconnectWan()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Protocol-dependent Settings -->
+    <div class="nc-card">
+      <div class="nc-card-head">
+        <div class="nc-card-head-left">
+          <h2 id="proto-settings-title">DHCP Settings</h2>
+        </div>
+      </div>
+      <div class="nc-card-body">
+        <!-- DHCP panel -->
+        <div id="pp-dhcp" class="proto-panel">
+          <div class="nf full">
+            <span class="hint" style="color:var(--text-mid);font-size:.76rem">IP address, gateway and DNS are assigned automatically by Upstream.</span>
+          </div>
+          <div class="nf full" style="flex-direction:row;align-items:center;flex-wrap:wrap;gap:12px;padding:4px 0">
+            <label style="margin:0;font-size:.79rem;font-weight:600;color:var(--text-mid)">Override DNS</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="peer-dns-lbl">Use Peer DNS</span>
+              <label class="toggle">
+                <input type="checkbox" id="peer-dns-tog" onchange="togglePeerDns(this.checked)">
+                <div class="tog-track"></div><div class="tog-thumb"></div>
+              </label>
+            </div>
+          </div>
+          <div id="dns-manual" class="nf full" style="display:none;flex-direction:column;gap:4px">
+            <label>DNS Servers</label>
+            <div id="dns-block-dhcp">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;margin-bottom:4px">
+                <div class="nf"><label>Primary DNS</label><input type="text" id="dns-pri-dhcp" class="dns-inp" placeholder="e.g. 8.8.8.8" oninput="this.classList.remove('field-error');var m=this.parentNode.querySelector('.field-error-msg');if(m)m.remove();wanMarkDirty()"></div>
+                <div class="nf"><label>Secondary DNS</label><input type="text" id="dns-sec-dhcp" class="dns-inp" placeholder="e.g. 8.8.4.4 (optional)" oninput="wanMarkDirty()"></div>
+              </div>
+              <div id="dns-extras-dhcp" class="dns-extras"></div>
+              <button type="button" class="dns-add-btn" onclick="dnsAddEntry('dhcp')">+ Extra DNS</button>
+            </div>
+          </div>
+        </div>
+        <!-- Static IP panel -->
+        <div id="pp-static" class="proto-panel">
+          <div class="nf"><label>IP Address <span class="req">*</span></label><input type="text" id="s-ip" placeholder="203.0.113.10" oninput="wanMarkDirty()"></div>
+          <div class="nf"><label>Subnet Mask <span class="req">*</span></label><input type="text" id="s-mask" placeholder="255.255.255.0" oninput="wanMarkDirty()"></div>
+          <div class="nf"><label>Gateway <span class="req">*</span></label><input type="text" id="s-gw" placeholder="203.0.113.1" oninput="wanMarkDirty()"></div>
+          <div class="nf full" style="flex-direction:column;gap:4px">
+            <label>DNS Servers</label>
+            <div id="dns-block-static">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;margin-bottom:4px">
+                <div class="nf"><label>Primary DNS</label><input type="text" id="dns-pri-static" class="dns-inp" placeholder="e.g. 8.8.8.8" oninput="this.classList.remove('field-error');var m=this.parentNode.querySelector('.field-error-msg');if(m)m.remove();wanMarkDirty()"></div>
+                <div class="nf"><label>Secondary DNS</label><input type="text" id="dns-sec-static" class="dns-inp" placeholder="e.g. 8.8.4.4 (optional)" oninput="wanMarkDirty()"></div>
+              </div>
+              <div id="dns-extras-static" class="dns-extras"></div>
+              <button type="button" class="dns-add-btn" onclick="dnsAddEntry('static')">+ Extra DNS</button>
+            </div>
+          </div>
+        </div>
+        <!-- PPPoE panel -->
+        <div id="pp-pppoe" class="proto-panel">
+          <div class="nf"><label>Username <span class="req">*</span></label><input type="text" id="ppp-user" placeholder="ISP username" oninput="wanMarkDirty()"></div>
+          <div class="nf">
+            <label>Password <span class="req">*</span></label>
+            <div class="pw-wrap">
+              <input type="password" id="ppp-pass" placeholder="ISP password" autocomplete="new-password" oninput="wanMarkDirty()">
+              <button class="pw-eye" onclick="toggleEye(this,'ppp-pass')" type="button" aria-label="Show password"><svg class="eye-on" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+            </div>
+          </div>
+          <div class="nf"><label>Service Name (optional)</label><input type="text" id="ppp-svc" placeholder="Leave blank if not required" oninput="wanMarkDirty()"></div>
+          <div class="nf full" style="flex-direction:row;align-items:center;flex-wrap:wrap;gap:12px;padding:4px 0">
+            <label style="margin:0;font-size:.79rem;font-weight:600;color:var(--text-mid)">Override DNS</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="peer-dns-lbl">Use Peer DNS</span>
+              <label class="toggle">
+                <input type="checkbox" id="pppoe-peer-dns-tog" onchange="togglePppoePeerDns(this.checked)">
+                <div class="tog-track"></div><div class="tog-thumb"></div>
+              </label>
+            </div>
+          </div>
+          <div id="pppoe-dns-manual" class="nf full" style="display:none;flex-direction:column;gap:4px">
+            <label>DNS Servers</label>
+            <div id="dns-block-pppoe">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;margin-bottom:4px">
+                <div class="nf"><label>Primary DNS</label><input type="text" id="dns-pri-pppoe" class="dns-inp" placeholder="e.g. 8.8.8.8" oninput="this.classList.remove('field-error');var m=this.parentNode.querySelector('.field-error-msg');if(m)m.remove();wanMarkDirty()"></div>
+                <div class="nf"><label>Secondary DNS</label><input type="text" id="dns-sec-pppoe" class="dns-inp" placeholder="e.g. 8.8.4.4 (optional)" oninput="wanMarkDirty()"></div>
+              </div>
+              <div id="dns-extras-pppoe" class="dns-extras"></div>
+              <button type="button" class="dns-add-btn" onclick="dnsAddEntry('pppoe')">+ Extra DNS</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="nc-actions">
+      </div>
+    </div>
+
+    <!-- Card 4: MTU & MAC Address -->
+    <div class="nc-card">
+      <div class="nc-card-head">
+        <div class="nc-card-head-left">
+          <h2>Advanced Settings</h2>
+        </div>
+      </div>
+      <div class="nc-card-body">
+        <div class="fg" style="margin-bottom:8px">
+          <div class="nf">
+            <label>Override MTU</label>
+            <input type="text" id="wan-mtu" placeholder="Auto" oninput="wanMarkDirty();_updateMtuHint()">
+            <span class="hint">Leave blank to use the value negotiated by the connection</span>
+            <span class="hint mtu-override-hint" style="display:none;color:#f0b432"></span>
+          </div>
+          <div class="nf">
+            <label>MAC Address Clone (optional)</label>
+            <input type="text" id="wan-mac" placeholder="AA:BB:CC:DD:EE:FF" oninput="wanMarkDirty()">
+            <span class="hint">Spoof WAN interface MAC</span>
+            <span class="hint">Current: <span id="cur-mac" style="font-weight:600;color:#475569;font-family:ui-monospace,monospace">-</span></span>
+          </div>
+        </div><!-- /nc-card-body -->
+      </div><!-- /nc-card -->
+
+      <hr class="nc-hr" style="margin: 2px 0">
+
+      <div style="padding:0 18px 18px">
+        <!-- IPv6 -->
+        <div>
+          <div style="font-size:.70rem;font-weight:700;color:var(--accent);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em">IPv6</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:10px;align-items:start">
+
+            <!-- WAN IPv6 -->
+            <div class="nc-offload-card" id="ipv6-wan-card" style="margin-bottom:0">
+              <div class="nc-offload-head">
+                <div class="nc-offload-title-row">
+                  <span class="nc-offload-title">WAN IPv6</span>
+                  <span class="nc-offload-badge" id="ipv6-wan-badge" style="display:none">Active</span>
+                </div>
+                <label class="toggle" style="flex-shrink:0;transform:scale(0.85);margin-right:-4px">
+                  <input type="checkbox" id="ipv6-wan-tog" onchange="wanMarkDirty();_updateIpv6MismatchWarn()">
+                  <span class="tog-track"></span><span class="tog-thumb"></span>
+                </label>
+              </div>
+              <span class="nc-offload-tip">Enables IPv6 on the WAN interface. The upstream must provide IPv6 service (SLAAC or DHCPv6).</span>
+            </div>
+
+            <!-- LAN IPv6 -->
+            <div class="nc-offload-card" id="ipv6-lan-card" style="margin-bottom:0">
+              <div class="nc-offload-head">
+                <div class="nc-offload-title-row">
+                  <span class="nc-offload-title">LAN IPv6</span>
+                  <span class="nc-offload-badge" id="ipv6-lan-badge" style="display:none">Active</span>
+                </div>
+                <label class="toggle" style="flex-shrink:0;transform:scale(0.85);margin-right:-4px">
+                  <input type="checkbox" id="ipv6-lan-tog" onchange="wanMarkDirty();_updateIpv6MismatchWarn()">
+                  <span class="tog-track"></span><span class="tog-thumb"></span>
+                </label>
+              </div>
+              <span class="nc-offload-tip">Enables IPv6 on the LAN. Clients receive an IPv6 prefix from the router via RA/DHCPv6.</span>
+            </div>
+
+          </div>
+          <div class="nc-offload-note" id="ipv6-note" style="margin-top:8px"><span id="ipv6-mismatch-warn" style="display:none;color:#f0b432;font-weight:600;margin-bottom:4px">IPv6 networking will not function: WAN IPv6 is enabled but LAN IPv6 is disabled, so the router cannot route IPv6 traffic to local clients. Enable LAN IPv6 to allow downstream devices to receive global IPv6 addresses via SLAAC/DHCPv6 and reach the wider IPv6 internet.</span>WAN IPv6 requires LAN IPv6 to be enabled in order to route IPv6 traffic to local clients. Enabling LAN IPv6 alone allows the router and connected devices to use link-local IPv6 communication without upstream connectivity.</div>
+        </div>
+
+        <hr class="nc-hr" style="margin: 8px 0">
+
+        <!-- Firewall Offloading -->
+        <div>
+          <div style="font-size:.70rem;font-weight:700;color:var(--accent);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em">Firewall Offloading</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:10px;align-items:start">
+
+            <!-- Software Offload -->
+            <div class="nc-offload-card" id="offload-sw-card" style="margin-bottom:0">
+              <div class="nc-offload-head">
+                <div class="nc-offload-title-row">
+                  <span class="nc-offload-title">Software Flow Offloading</span>
+                  <span class="nc-offload-badge" id="offload-sw-badge" style="display:none"></span>
+                </div>
+                <label class="toggle" style="flex-shrink:0;transform:scale(0.85);margin-right:-4px">
+                  <input type="checkbox" id="offload-sw-tog" onchange="onOffloadChange('offload-sw-tog')">
+                  <span class="tog-track"></span><span class="tog-thumb"></span>
+                </label>
+              </div>
+              <span class="nc-offload-tip">Routes packets through a kernel fastpath, bypassing conntrack on established flows.</span>
+              <div class="nc-offload-foot">
+                <button class="nc-offload-toggle-detail" onclick="toggleOffloadDetail('sw')" type="button">Details <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="offload-sw-chevron"><polyline points="6 9 12 15 18 9"/></svg></button>
+              </div>
+              <div class="nc-offload-detail" id="offload-sw-detail">
+                <div class="nc-offload-row">
+                  <span class="nc-offload-pro">✓ Lower CPU usage on high-throughput connections</span>
+                  <span class="nc-offload-pro">✓ Throughput gains on gigabit+ links without hardware assist</span>
+                  <span class="nc-offload-con">✗ Bypasses firewall rules for offloaded flows — QoS / traffic shaping may not apply</span>
+                  <span class="nc-offload-con">✗ Some stateful firewall features (e.g. conntrack helpers, SIP ALG) stop working</span>
+                </div>
+                <div class="nc-offload-note">Best for: high-speed WAN where CPU is the bottleneck and you don't need per-flow QoS.</div>
+              </div>
+            </div>
+
+            <!-- Hardware Offload -->
+            <div class="nc-offload-card" id="offload-hw-card" style="margin-bottom:0">
+              <div class="nc-offload-head">
+                <div class="nc-offload-title-row">
+                  <span class="nc-offload-title">Hardware Flow Offloading</span>
+                  <span class="nc-offload-badge" id="offload-hw-badge" style="display:none"></span>
+                </div>
+                <label class="toggle" style="flex-shrink:0;transform:scale(0.85);margin-right:-4px">
+                  <input type="checkbox" id="offload-hw-tog" onchange="onOffloadChange('offload-hw-tog')">
+                  <span class="tog-track"></span><span class="tog-thumb"></span>
+                </label>
+              </div>
+              <span class="nc-offload-tip">Offloads packet forwarding to the NIC/switch ASIC, near-zero CPU overhead at wire speed.</span>
+              <div class="nc-offload-foot">
+                <button class="nc-offload-toggle-detail" onclick="toggleOffloadDetail('hw')" type="button">Details <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="offload-hw-chevron"><polyline points="6 9 12 15 18 9"/></svg></button>
+              </div>
+              <div class="nc-offload-detail" id="offload-hw-detail">
+                <div class="nc-offload-row">
+                  <span class="nc-offload-pro">✓ Near wire-speed forwarding with virtually zero CPU usage</span>
+                  <span class="nc-offload-pro">✓ Ideal for multi-gigabit WAN connections (2.5G / 10G)</span>
+                  <span class="nc-offload-con">✗ Requires hardware support — not all NICs/SoCs support it</span>
+                  <span class="nc-offload-con">✗ All software offload limitations apply plus deep packet inspection is lost</span>
+                  <span class="nc-offload-con">✗ Cannot be enabled without software offload active</span>
+                </div>
+                <div class="nc-offload-note">Best for: routers with compatible SoCs (MT7621, MT7622, IPQ807x) on very high-speed links.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <hr class="nc-hr" style="margin: 8px 0">
+
+        <!-- Packet Steering -->
+        <div>
+          <div style="font-size:.70rem;font-weight:700;color:var(--accent);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em">Packet Steering</div>
+          <div class="nc-offload-card" id="pkt-steer-card" style="margin-bottom:0">
+            <div class="nc-offload-head">
+              <div class="nc-offload-title-row">
+                <span class="nc-offload-title">Packet Steering</span>
+                <span class="nc-offload-badge" id="pkt-steer-badge" style="display:none"></span>
+              </div>
+            </div>
+            <span class="nc-offload-tip">Distributes network packet processing across CPU cores. May help or hinder network speed — manually check per-core usage under high throughput.</span>
+            <div class="nc-offload-foot">
+              <button class="nc-offload-toggle-detail" onclick="toggleOffloadDetail('pkt-steer')" type="button">Details <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="offload-pkt-steer-chevron"><polyline points="6 9 12 15 18 9"/></svg></button>
+              <div class="pkt-steer-wrap nf" style="width:130px;flex-shrink:0;margin-right:5px">
+                <select id="pkt-steer-sel" onchange="wanMarkDirty()">
+                  <option value="0">Disabled</option>
+                  <option value="1">Enabled</option>
+                  <option value="2">Enabled (all CPUs)</option>
+                </select>
+              </div>
+            </div>
+            <div class="nc-offload-detail" id="offload-pkt-steer-detail">
+              <div class="nc-offload-row">
+                <span class="nc-offload-pro">✓ Better multi-core CPU utilisation on high-traffic routers</span>
+                <span class="nc-offload-pro">✓ Reduces per-core bottlenecks on SMP systems (dual/quad core SoCs)</span>
+                <span class="nc-offload-con">✗ Negligible benefit on single-core devices — may add minor overhead</span>
+                <span class="nc-offload-con">✗ Can cause out-of-order packet delivery on some older drivers</span>
+              </div>
+              <div class="nc-offload-note">Best for: multi-core routers (MT7622, IPQ807x, RPi CM4) handling many simultaneous clients. Use "all CPUs" only if per-core load is unbalanced.</div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /padding -->    </div><!-- /nc-card Advanced Settings -->
+
+    <!-- Save & Apply -->
+    <div style="display:flex;justify-content:flex-end;margin-top:12px;margin-bottom:16px">
+      <button class="nc-btn btn-wan btn-save-apply" id="wan-save-btn" onclick="saveWan()" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        Save &amp; Apply
+      </button>
+    </div>
+
+  </div><!-- /page-wan -->
+
+
+</div><!-- /nc-wrap -->
+
+<div class="save-overlay" id="save-overlay">
+  <div class="save-overlay-box" id="save-overlay-box">
+    <div class="save-overlay-spinner"></div>
+    <div class="save-overlay-text" id="save-overlay-text">Saving…</div>
+    <div class="save-overlay-sub"  id="save-overlay-sub">Please wait, applying settings</div>
+  </div>
+</div>
+
+<div class="toast-overlay" id="toast-overlay" onclick="dismissBanner()">
+  <div class="toast-overlay-box">
+    <div class="toast-overlay-icon" id="toast-overlay-icon">
+      <svg id="toast-overlay-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></svg>
+    </div>
+    <div class="toast-overlay-text" id="toast-overlay-text"></div>
+    <ul class="toast-overlay-changes" id="toast-overlay-changes"></ul>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="reconnect-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" style="color:#f07070">Re-establish connection?</div>
+    <div class="save-confirm-warn" style="display:flex;margin:2px 0">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>This will briefly disconnect your internet while the WAN interface reconnects.</span>
+    </div>
+    <div class="confirm-btns">
+      <button class="confirm-btn-no" onclick="document.getElementById('reconnect-overlay').classList.remove('show')">Cancel</button>
+      <button class="confirm-btn-yes" onclick="_doReconnectWan()">Reconnect</button>
+    </div>
+  </div>
+</div>
+
+<!-- Save & Apply confirmation popup -->
+<div class="save-confirm-overlay" id="save-confirm-overlay">
+  <div class="save-confirm-box">
+    <div class="save-confirm-title">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Review Changes
+    </div>
+    <div class="save-confirm-changes" id="save-confirm-changes"></div>
+    <div class="save-confirm-warn" id="save-confirm-warn" style="display:none">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span id="save-confirm-warn-text"></span>
+    </div>
+    <div class="save-confirm-btns">
+      <button class="save-confirm-btn-cancel" onclick="document.getElementById('save-confirm-overlay').classList.remove('show')">Cancel</button>
+      <button class="save-confirm-btn-apply" id="save-confirm-apply-btn" onclick="_doSaveWan()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" style="display:none"></div>
+
+<script src="/luci-static/resources/view/easy_setup/wan.js"></script>
+{% include('footer') %}

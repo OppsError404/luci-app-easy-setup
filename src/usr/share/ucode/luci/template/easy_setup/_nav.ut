@@ -1,0 +1,102 @@
+<!-- Shared Easy Setup navigation (included via easy_setup/_nav). Renders the WAN
+     tab + Wireless dropdown once, wires its own handlers, and highlights the
+     active item from the URL, so it needs nothing from per-page JS. -->
+<div class="nc-nav">
+  <button class="nc-nav-tab" id="nav-wan-btn" type="button">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    </svg>
+    WAN / Internet
+  </button>
+  <div class="nc-nav-drop" onmouseenter="openWlDropdown()" onmouseleave="closeWlDropdown()">
+    <button class="nc-nav-tab wl" id="wl-nav-btn" type="button" onclick="toggleWlDropdown(event)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+        <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+        <circle cx="12" cy="20" r="1" fill="currentColor"/>
+      </svg>
+      Wireless
+      <svg class="nc-nav-drop-chevron" id="wl-drop-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="nc-nav-drop-menu" id="wl-drop-menu">
+      <button class="nc-nav-drop-item" id="wldrop-radio" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+        Radio Settings
+      </button>
+      <button class="nc-nav-drop-item" id="wldrop-aps" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+        Access Points
+      </button>
+      <button class="nc-nav-drop-item" id="wldrop-mesh" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="12" y1="7" x2="5" y2="17"/><line x1="12" y1="7" x2="19" y2="17"/><line x1="5" y1="19" x2="19" y2="19"/></svg>
+        Smart APs
+      </button>
+      <button class="nc-nav-drop-item" id="wldrop-guest" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Guest APs
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+// Shared nav behaviour — dropdown helpers are exposed globally so the inline
+// hover/click handlers above can reach them; navigation and active-state are
+// derived from the URL so this partial is self-contained (no page BASE needed).
+function toggleWlDropdown(e) {
+  e.stopPropagation();
+  var menu = document.getElementById("wl-drop-menu");
+  if (menu.classList.contains("open")) { closeWlDropdown(); } else { openWlDropdown(); }
+}
+function openWlDropdown() {
+  var menu = document.getElementById("wl-drop-menu");
+  if (!menu) return;
+  var chevron = document.getElementById("wl-drop-chevron");
+  var wrap = menu.closest(".nc-nav-drop");
+  menu.classList.add("open");
+  if (chevron) chevron.style.transform = "rotate(180deg)";
+  if (wrap) wrap.classList.add("drop-open");
+}
+function closeWlDropdown() {
+  var menu = document.getElementById("wl-drop-menu");
+  if (!menu) return;
+  var chevron = document.getElementById("wl-drop-chevron");
+  var wrap = menu.closest(".nc-nav-drop");
+  menu.classList.remove("open");
+  if (chevron) chevron.style.transform = "";
+  if (wrap) wrap.classList.remove("drop-open");
+}
+document.addEventListener("click", function() { closeWlDropdown(); });
+
+(function() {
+  // Strip the current page suffix to get the Easy Setup root, then wire navigation.
+  var base = window.location.pathname.replace(/\/(aps|radio|smart_ap|guest)\/?$/, "");
+  function go(suffix) { return function() { window.location.href = base + suffix; }; }
+  var wanBtn = document.getElementById("nav-wan-btn");
+  if (wanBtn) wanBtn.onclick = go("");
+  var items = [
+    { id: "wldrop-aps",   suffix: "/aps" },
+    { id: "wldrop-radio", suffix: "/radio" },
+    { id: "wldrop-mesh",  suffix: "/smart_ap" },
+    { id: "wldrop-guest", suffix: "/guest" }
+  ];
+  items.forEach(function(it) {
+    var el = document.getElementById(it.id);
+    if (el) el.onclick = go(it.suffix);
+  });
+
+  // Highlight the active dropdown item (and the Wireless tab), or the WAN tab on root.
+  var path = window.location.pathname.replace(/\/+$/, "");
+  var activeId = null;
+  for (var i = 0; i < items.length; i++) {
+    if (new RegExp(items[i].suffix + "$").test(path)) { activeId = items[i].id; break; }
+  }
+  if (activeId) {
+    var item = document.getElementById(activeId); if (item) item.classList.add("active");
+    var wl = document.getElementById("wl-nav-btn"); if (wl) wl.classList.add("active");
+  } else if (wanBtn) {
+    wanBtn.classList.add("active");
+  }
+})();
+</script>

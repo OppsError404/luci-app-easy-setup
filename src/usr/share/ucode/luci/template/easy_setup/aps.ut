@@ -1,0 +1,82 @@
+{% include('header') %}
+<meta charset="utf-8" />
+<link rel="stylesheet" href="/luci-static/resources/view/easy_setup/aps.css" />
+<script>
+var EASY_SID = "{{ ctx.authsession }}";
+</script>
+<script src="/luci-static/resources/view/easy_setup/common.js"></script>
+
+<div class="nc-wrap">
+  <div class="nc-header">
+    <div class="nc-header-text">
+      <h1>Easy Setup</h1>
+      <p>Configure WAN internet connection and Wi-Fi settings</p>
+    </div>
+  </div>
+
+  {% include('easy_setup/_nav') %}
+
+  <div class="nc-subpage-title">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+    <h2>Access Points</h2>
+  </div>
+
+  <div class="page-desc">
+    Manage the Wi-Fi networks (SSIDs) broadcast by each radio band (2.4 GHz, 5 GHz, etc.). Add, rename, secure, hide, or remove SSIDs per band. Radio hardware settings (channel, width, TX power) live on the Radio Settings page.
+  </div>
+
+  <div class="band-tabs" id="band-tabs">
+    <button class="band-tab active" id="tab-2g"  onclick="switchBand('2g',this)">2.4 GHz</button>
+    <button class="band-tab"        id="tab-5g"  onclick="switchBand('5g',this)">5 GHz</button>
+    <button class="band-tab" style="display:none" id="tab-5gb" onclick="switchBand('5gb',this)">5 GHz (2)</button>
+    <button class="band-tab" style="display:none" id="tab-6g"  onclick="switchBand('6g',this)">6 GHz</button>
+  </div>
+
+  <div id="bp-2g"  class="band-panel active"><div style="text-align:center;padding:40px;color:var(--text-muted)">Loading access points...</div></div>
+  <div id="bp-5g"  class="band-panel"></div>
+  <div id="bp-5gb" class="band-panel"></div>
+  <div id="bp-6g"  class="band-panel"></div>
+
+  <div class="universal-save-bar" id="universal-save-bar">
+    <span class="usb-status" id="usb-status">No changes</span>
+    <button class="nc-btn btn-wl btn-save-apply" id="usb-apply" onclick="saveAllUniversal()" disabled>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M19 21H5a2 0 0 1 -2 -2V5a2 0 0 1 2 -2h11l5 5v11a2 0 0 1 -2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save &amp; Apply</button>
+  </div>
+
+ </div>
+
+<div class="save-overlay" id="save-overlay">
+  <div class="save-overlay-box">
+    <div class="save-overlay-spinner"></div>
+    <div class="save-overlay-text" id="save-overlay-text">Saving...</div>
+    <div class="save-overlay-sub"  id="save-overlay-sub">Please wait</div>
+  </div>
+</div>
+
+<!-- Generic SSID confirmation popup -->
+<div class="confirm-overlay" id="ssid-confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" style="color:#f0b432">Apply SSID Changes?</div>
+    <div class="save-confirm-warn" style="display:flex;margin:2px 0">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span id="ssid-confirm-msg">Applying changes will briefly disconnect clients connected to this SSID.</span>
+    </div>
+    <div class="confirm-btns">
+      <button class="confirm-btn-no" onclick="document.getElementById('ssid-confirm-overlay').classList.remove('show')">Cancel</button>
+      <button class="confirm-btn-yes" id="ssid-confirm-yes" style="background:var(--accent)">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-overlay" id="toast-overlay" onclick="dismissBanner()">
+  <div class="toast-overlay-box">
+    <div class="toast-overlay-icon" id="toast-overlay-icon">
+      <svg id="toast-overlay-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></svg>
+    </div>
+    <div class="toast-overlay-text" id="toast-overlay-text"></div>
+    <ul class="toast-overlay-changes" id="toast-overlay-changes"></ul>
+  </div>
+</div>
+
+<script src="/luci-static/resources/view/easy_setup/aps.js"></script>
+{% include('footer') %}
