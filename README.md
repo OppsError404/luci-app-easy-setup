@@ -14,7 +14,7 @@ After installation, navigate to **Network → Easy Setup** in the LuCI web inter
 
 ```
 apk update && \
-wget --no-check-certificate -O /tmp/luci-app-easy-setup.apk "https://github.com/OppsError404/luci-app-easy-setup/releases/download/v2.0.1-r1/luci-app-easy-setup-2.0.1-r1.apk" && \
+wget --no-check-certificate -O /tmp/luci-app-easy-setup.apk "https://github.com/OppsError404/luci-app-easy-setup/releases/download/v2.0.1-r2/luci-app-easy-setup-2.0.1-r2.apk" && \
 apk add --allow-untrusted /tmp/luci-app-easy-setup.apk && \
 rm -f /tmp/luci-app-easy-setup.apk
 ```
@@ -23,7 +23,7 @@ rm -f /tmp/luci-app-easy-setup.apk
 
 ```
 opkg update && \
-wget --no-check-certificate -O /tmp/luci-app-easy-setup.ipk "https://github.com/OppsError404/luci-app-easy-setup/releases/download/v2.0.1-r1/luci-app-easy-setup_2.0.1-r1.ipk" && \
+wget --no-check-certificate -O /tmp/luci-app-easy-setup.ipk "https://github.com/OppsError404/luci-app-easy-setup/releases/download/v2.0.1-r2/luci-app-easy-setup_2.0.1-r2.ipk" && \
 opkg install /tmp/luci-app-easy-setup.ipk && \
 rm -f /tmp/luci-app-easy-setup.ipk
 ```
