@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-easy-setup
 PKG_VERSION:=2.0.1
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_LICENSE:=MIT
 PKG_MAINTAINER:=Mahid
 PKG_URL:=https://github.com/OppsError404/luci-app-easy-setup
