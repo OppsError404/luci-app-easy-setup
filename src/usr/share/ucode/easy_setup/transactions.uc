@@ -5,6 +5,15 @@ import { readfile, writefile, open, mkdir, mkdtemp, lsdir, unlink, rmdir, chmod,
 
 const CONFIGS = ['network', 'wireless', 'firewall', 'dhcp'];
 
+function uci_action(deps, method, args) {
+    // rpcd's UCI actions return only a ubus status, not a response blob.
+    // Native ubus.call() therefore returns null on BOTH success and failure;
+    // consume its numeric error immediately to distinguish the two.
+    let reply = deps.bus.call('uci', method, args);
+    let code = reply == null ? (type(deps.bus.error) == 'function' ? deps.bus.error(true) : 7) : 0;
+    return {success: code == null || code === 0, code: code ?? 0};
+}
+
 function now_ms(deps) {
     // The worker supplies dependencies, never RPC arguments. Injection is
     // solely for native fixture clocks; production uses a boot-wide clock.
@@ -361,10 +370,11 @@ function rollback_expired(state, p, deps) {
         state.rollback_requested = true;
         private_file(p.lock + '/state.json', sprintf('%J', state));
     }
-    if (deps.bus.call('uci', 'rollback', {ubus_rpc_session: state.sid}) == null) {
+    let rolled_back = uci_action(deps, 'rollback', {ubus_rpc_session: state.sid});
+    if (!rolled_back.success) {
         // rpcd has already rolled back only when it reports NO_DATA and the
         // persistent files really match the pre-apply snapshot.
-        if (type(deps.bus.error) != 'function' || deps.bus.error(true) != 5)
+        if (rolled_back.code != 5)
             die('Rollback deadline expired; recovery could not be verified');
         if (state.confirm_requested === true && desired_matches(state, p)) return confirmed(state, p);
         snapshots_unchanged(state.op, p);
@@ -594,9 +604,9 @@ function control_impl(method, args, deps) {
             state.apply_settled = false;
             state.confirm_after_ms = now_ms(deps) + 4000;
             private_file(p.lock + '/state.json', sprintf('%J', state));
-            let applied = null;
+            let applied = false;
             try {
-                applied = deps.bus.call('uci', 'apply', {ubus_rpc_session: sid, timeout, rollback: true});
+                applied = uci_action(deps, 'apply', {ubus_rpc_session: sid, timeout, rollback: true}).success;
             } catch (e) {
                 // The call may have applied changes before throwing. Keep its
                 // status uncertain, but still journal the settlement holdoff.
@@ -606,7 +616,7 @@ function control_impl(method, args, deps) {
             state.confirm_after_ms = max(state.confirm_after_ms, now_ms(deps) + 4000);
             state.apply_settled = true;
             private_file(p.lock + '/state.json', sprintf('%J', state));
-            if (applied == null) die('Unable to verify configuration apply');
+            if (!applied) die('Unable to verify configuration apply');
             return {success: true, confirm_wait_ms: confirm_wait(state, deps), message: 'Changes applied; confirmation is required'};
         }
         if (method == 'confirm_changes') {
@@ -620,8 +630,9 @@ function control_impl(method, args, deps) {
                 // Failed intent publication must leave rollback armed.
                 private_file(p.lock + '/state.json', sprintf('%J', state));
             }
-            if (deps.bus.call('uci', 'confirm', {ubus_rpc_session: sid}) == null) {
-                if (!previous_intent || type(deps.bus.error) != 'function' || deps.bus.error(true) != 5)
+            let confirmation = uci_action(deps, 'confirm', {ubus_rpc_session: sid});
+            if (!confirmation.success) {
+                if (!previous_intent || confirmation.code != 5)
                     die('Unable to confirm configuration');
                 if (!desired_matches(state, p)) {
                     snapshots_unchanged(state.op, p);
@@ -641,9 +652,10 @@ function control_impl(method, args, deps) {
                 state.rollback_requested = true;
                 private_file(p.lock + '/state.json', sprintf('%J', state));
             }
-            if (deps.bus.call('uci', 'rollback', {ubus_rpc_session: sid}) == null) {
+            let rolled_back = uci_action(deps, 'rollback', {ubus_rpc_session: sid});
+            if (!rolled_back.success) {
                 if ((!previous_rollback && state.confirm_requested !== true) ||
-                    type(deps.bus.error) != 'function' || deps.bus.error(true) != 5)
+                    rolled_back.code != 5)
                     die('Unable to roll back configuration');
                 if (state.confirm_requested === true && desired_matches(state, p)) {
                     confirmed(state, p);
